@@ -21,7 +21,7 @@ import {
   CalendarDays,
   Sun,
   Moon,
-  Github,
+  Share2,
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useTheme } from 'next-themes';
@@ -46,6 +46,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: '/', label: 'Goals', icon: Target },
     { href: '/today', label: 'Today', icon: CheckCircle2 },
     { href: '/calendar', label: 'Plan', icon: CalendarDays },
+    { href: '/mindmap', label: 'Mindmap', icon: Share2 },
   ];
 
   return (
@@ -101,6 +102,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-// Add next-themes to package.json
-// "next-themes": "^0.3.0"
