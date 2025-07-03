@@ -9,16 +9,16 @@ const nextMonth = new Date(today);
 nextMonth.setMonth(nextMonth.getMonth() + 1);
 
 const tasks: Task[] = [
-  { id: "t1", milestoneId: "m1", goalId: "g1", title: "Setup Next.js project", dueDate: today.toISOString(), priority: "High", completed: true },
-  { id: "t2", milestoneId: "m1", goalId: "g1", title: "Create basic components", dueDate: tomorrow.toISOString(), priority: "Medium", completed: false },
-  { id: "t3", milestoneId: "m2", goalId: "g1", title: "Read App Router docs", dueDate: today.toISOString(), priority: "High", completed: true },
-  { id: "t4", milestoneId: "m2", goalId: "g1", title: "Implement server components", dueDate: nextWeek.toISOString(), priority: "Medium", completed: false },
-  { id: "t5", milestoneId: "m3", goalId: "g2", title: "Create user schema in Supabase", dueDate: null, priority: "High", completed: true },
-  { id: "t6", milestoneId: "m3", goalId: "g2", title: "Implement RLS policies", dueDate: today.toISOString(), priority: "High", completed: false },
-  { id: "t7", milestoneId: "m4", goalId: "g2", title: "Build login form", dueDate: nextWeek.toISOString(), priority: "Medium", completed: false },
-  { id: "t8", milestoneId: "m5", goalId: "g3", title: "Go for a 30-minute run", dueDate: today.toISOString(), priority: "Medium", completed: true },
-  { id: "t9", milestoneId: "m5", goalId: "g3", title: "Meal prep for the week", dueDate: tomorrow.toISOString(), priority: "Low", completed: false },
-  { id: "t10", milestoneId: "m6", goalId: "g3", title: "Finish 'Atomic Habits'", dueDate: nextMonth.toISOString(), priority: "Low", completed: false },
+  { id: "t1", milestoneId: "m1", goalId: "g1", title: "Setup Next.js project", dueDate: today.toISOString(), priority: "High", completed: true, scheduledDateTime: new Date(new Date(today).setHours(9, 0, 0, 0)).toISOString() },
+  { id: "t2", milestoneId: "m1", goalId: "g1", title: "Create basic components", dueDate: tomorrow.toISOString(), priority: "Medium", completed: false, scheduledDateTime: new Date(new Date(tomorrow).setHours(11, 0, 0, 0)).toISOString() },
+  { id: "t3", milestoneId: "m2", goalId: "g1", title: "Read App Router docs", dueDate: today.toISOString(), priority: "High", completed: true, scheduledDateTime: null },
+  { id: "t4", milestoneId: "m2", goalId: "g1", title: "Implement server components", dueDate: nextWeek.toISOString(), priority: "Medium", completed: false, scheduledDateTime: null },
+  { id: "t5", milestoneId: "m3", goalId: "g2", title: "Create user schema in Supabase", dueDate: null, priority: "High", completed: true, scheduledDateTime: null },
+  { id: "t6", milestoneId: "m3", goalId: "g2", title: "Implement RLS policies", dueDate: today.toISOString(), priority: "High", completed: false, scheduledDateTime: new Date(new Date(today).setHours(14, 0, 0, 0)).toISOString() },
+  { id: "t7", milestoneId: "m4", goalId: "g2", title: "Build login form", dueDate: nextWeek.toISOString(), priority: "Medium", completed: false, scheduledDateTime: new Date(new Date(nextWeek).setHours(10, 0, 0, 0)).toISOString() },
+  { id: "t8", milestoneId: "m5", goalId: "g3", title: "Go for a 30-minute run", dueDate: today.toISOString(), priority: "Medium", completed: true, scheduledDateTime: null },
+  { id: "t9", milestoneId: "m5", goalId: "g3", title: "Meal prep for the week", dueDate: tomorrow.toISOString(), priority: "Low", completed: false, scheduledDateTime: null },
+  { id: "t10", milestoneId: "m6", goalId: "g3", title: "Finish 'Atomic Habits'", dueDate: nextMonth.toISOString(), priority: "Low", completed: false, scheduledDateTime: null },
 ];
 
 const milestones: Milestone[] = [

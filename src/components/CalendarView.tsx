@@ -1,6 +1,31 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  set,
+  startOfHour,
+} from "date-fns";
 import { PageHeader } from "./PageHeader";
 import { Task } from "@/lib/types";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,10 +36,11 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Checkbox } from "./ui/checkbox";
 import { Badge } from "./ui/badge";
-import { format, isSameDay } from "date-fns";
-import { ListCollapse } from "lucide-react";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { GripVertical, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const PriorityBadge = ({ priority }: { priority: Task["priority"] }) => {
   const variant: "default" | "secondary" | "destructive" =
@@ -26,101 +52,323 @@ const PriorityBadge = ({ priority }: { priority: Task["priority"] }) => {
   return <Badge variant={variant}>{priority}</Badge>;
 };
 
-export function CalendarView({ allTasks }: { allTasks: Task[] }) {
-  const [tasks, setTasks] = useState(allTasks);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+const DraggableTask = ({ task }: { task: Task }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, data: { type: "task", task } });
 
-  const handleToggle = (taskId: string, completed: boolean) => {
-    setTasks(
-      tasks.map((task) => (task.id === taskId ? { ...task, completed } : task))
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Card ref={setNodeRef} style={style} className="p-3 mb-2 touch-none bg-card">
+      <div className="flex items-center">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab p-1"
+          aria-describedby={`task-dnd-handle-${task.id}`}
+        >
+          <GripVertical className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div className="ml-2 flex-grow">
+          <p className="font-medium">{task.title}</p>
+          <p className="text-xs text-muted-foreground">Goal: {task.goalId}</p>
+        </div>
+        <PriorityBadge priority={task.priority} />
+      </div>
+    </Card>
+  );
+};
+
+const ScheduledTask = ({ task }: { task: Task }) => {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    data: { type: "task", task },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={cn("touch-none my-1", isDragging && "opacity-30")}
+    >
+      <Card className="p-2 text-xs bg-primary/20 border-primary/50">
+        <p className="font-bold truncate">{task.title}</p>
+        <p className="truncate text-muted-foreground">{task.priority} Priority</p>
+      </Card>
+    </div>
+  );
+};
+
+export function CalendarView({ allTasks }: { allTasks: Task[] }) {
+  const [tasks, setTasks] = useState<Task[]>(allTasks);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  const week = useMemo(() => {
+    const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const end = endOfWeek(selectedDate, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [selectedDate]);
+
+  const { unscheduledTasks, tasksByDateTime } = useMemo(() => {
+    const unscheduled = tasks.filter((task) => !task.scheduledDateTime);
+    const byDateTime: Record<string, Task[]> = {};
+    tasks.forEach((task) => {
+      if (task.scheduledDateTime) {
+        const key = startOfHour(new Date(task.scheduledDateTime)).toISOString();
+        if (!byDateTime[key]) {
+          byDateTime[key] = [];
+        }
+        byDateTime[key].push(task);
+      }
+    });
+    return { unscheduledTasks: unscheduled, tasksByDateTime: byDateTime };
+  }, [tasks]);
+
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7); // 7 AM to 9 PM
+
+  const handleAddTask = () => {
+    if (newTaskTitle.trim() === "") return;
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      title: newTaskTitle.trim(),
+      dueDate: null,
+      priority: "Medium",
+      completed: false,
+      milestoneId: "none",
+      goalId: "Brain Dump",
+      scheduledDateTime: null,
+    };
+    setTasks((prev) => [...prev, newTask]);
+    setNewTaskTitle("");
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    if (event.active.data.current?.type === "task") {
+      setActiveTask(event.active.data.current.task);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveTask(null);
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeIsTask = active.data.current?.type === "task";
+    const overIsSlot = over.data.current?.type === "slot";
+    const overIsBrainDump = over.id === "braindump-area";
+
+    if (active.id === over.id) return;
+    
+    // Dragging a task to a time slot
+    if (activeIsTask && overIsSlot) {
+      const taskId = active.id;
+      const newDateTime = over.data.current.dateTime.toISOString();
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, scheduledDateTime: newDateTime } : t))
+      );
+    }
+
+    // Dragging a task to the brain dump area to unschedule
+    if (activeIsTask && overIsBrainDump) {
+      const taskId = active.id;
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, scheduledDateTime: null } : t))
+      );
+    }
+
+    // Reordering tasks in the brain dump
+    const activeTaskData = active.data.current?.task;
+    const overTaskData = over.data.current?.task;
+    if (activeIsTask && active.id !== over.id && !activeTaskData?.scheduledDateTime && !overTaskData?.scheduledDateTime) {
+      const oldIndex = unscheduledTasks.findIndex((t) => t.id === active.id);
+      const newIndex = unscheduledTasks.findIndex((t) => t.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrderedUnscheduled = arrayMove(unscheduledTasks, oldIndex, newIndex);
+        setTasks((prev) => [
+          ...newOrderedUnscheduled,
+          ...prev.filter((t) => t.scheduledDateTime),
+        ]);
+      }
+    }
+  };
+
+  const TimeSlot = ({ dateTime }: { dateTime: Date }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: `slot-${dateTime.toISOString()}`,
+      data: { type: "slot", dateTime },
+    });
+
+    const dateTimeKey = startOfHour(dateTime).toISOString();
+    const tasksInSlot = tasksByDateTime[dateTimeKey] || [];
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn("h-24 border-t border-l p-1 relative", isOver && "bg-accent/50")}
+      >
+        {tasksInSlot.map((task) => (
+          <ScheduledTask key={task.id} task={task} />
+        ))}
+      </div>
     );
   };
 
-  const tasksForSelectedDay = useMemo(() => {
-    if (!selectedDate) return [];
-    return tasks.filter(
-      (task) => task.dueDate && isSameDay(new Date(task.dueDate), selectedDate)
+  const DroppableBrainDump = ({ children }: { children: React.ReactNode }) => {
+    const { setNodeRef, isOver } = useDroppable({ id: "braindump-area" });
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn("h-full p-1 rounded-lg", isOver && "bg-destructive/20")}
+      >
+        {children}
+      </div>
     );
-  }, [tasks, selectedDate]);
-  
-  const daysWithTasks = useMemo(() => {
-    return tasks
-      .filter(task => task.dueDate)
-      .map(task => new Date(task.dueDate as string));
-  }, [tasks]);
+  };
+
+  const weeklyTaskCount = useMemo(() => {
+    return week.map(
+      (day) =>
+        tasks.filter(
+          (task) =>
+            task.scheduledDateTime && isSameDay(new Date(task.scheduledDateTime), day)
+        ).length
+    );
+  }, [tasks, week]);
 
   return (
-    <div>
-      <PageHeader title="Plan View" />
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
+    <DndContext
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      collisionDetection={closestCenter}
+    >
+      <div className="space-y-6">
+        <PageHeader title="Plan View" />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
-            <CardContent className="p-0">
+            <CardHeader>
+              <CardTitle>Select a Week</CardTitle>
+            </CardHeader>
+            <CardContent>
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="p-3"
-                modifiers={{ withTasks: daysWithTasks }}
-                modifiersStyles={{
-                    withTasks: {
-                        border: "2px solid hsl(var(--primary))",
-                        borderRadius: 'var(--radius)'
-                    },
-                }}
+                onSelect={(date) => date && setSelectedDate(date)}
+                className="p-0"
               />
             </CardContent>
           </Card>
-        </div>
-        <div className="md:col-span-2">
-          <Card className="h-full">
+          <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle>
-                Tasks for{" "}
-                {selectedDate ? format(selectedDate, "PPP") : "selected day"}
-              </CardTitle>
+              <CardTitle>Brain Dump</CardTitle>
+              <CardDescription>
+                Drag tasks to the calendar to schedule them. Drag scheduled tasks here to unschedule.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {tasksForSelectedDay.length > 0 ? (
-                <div className="divide-y">
-                  {tasksForSelectedDay.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-4 py-3"
-                    >
-                      <Checkbox
-                        id={`task-cal-${task.id}`}
-                        checked={task.completed}
-                        onCheckedChange={(checked) =>
-                          handleToggle(task.id, !!checked)
-                        }
-                      />
-                      <label
-                        htmlFor={`task-cal-${task.id}`}
-                        className={`flex-1 ${
-                          task.completed
-                            ? "line-through text-muted-foreground"
-                            : ""
-                        }`}
-                      >
-                         <span className="font-medium">{task.title}</span>
-                         <p className="text-xs text-muted-foreground">Goal: {task.goalId}</p>
-                      </label>
-                      <PriorityBadge priority={task.priority} />
-                    </div>
-                  ))}
+              <DroppableBrainDump>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  <SortableContext
+                    items={unscheduledTasks.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {unscheduledTasks.map((task) => (
+                      <DraggableTask key={task.id} task={task} />
+                    ))}
+                  </SortableContext>
                 </div>
-              ) : (
-                <div className="text-center p-10 text-muted-foreground">
-                    <ListCollapse className="mx-auto size-12" />
-                    <h3 className="mt-4 text-lg font-medium">No tasks scheduled</h3>
-                    <p>Select a day to see your tasks.</p>
+                <div className="mt-4 flex gap-2">
+                  <Input
+                    placeholder="Add a new task..."
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
+                  />
+                  <Button onClick={handleAddTask}>
+                    <Plus className="h-4 w-4 mr-2" /> Add
+                  </Button>
                 </div>
-              )}
+              </DroppableBrainDump>
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly Timebox</CardTitle>
+            <CardDescription>
+              {format(week[0], "MMMM d")} - {format(week[6], "MMMM d, yyyy")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: "50px repeat(7, 1fr)",
+                minWidth: "800px",
+              }}
+            >
+              <div />
+              {week.map((day, i) => (
+                <div
+                  key={day.toISOString()}
+                  className="text-center font-bold p-2 border-b"
+                >
+                  <p>{format(day, "EEE")}</p>
+                  <p className="text-muted-foreground text-sm">{format(day, "d")}</p>
+                  <Badge
+                    variant={weeklyTaskCount[i] > 0 ? "secondary" : "outline"}
+                    className="mt-1"
+                  >
+                    {weeklyTaskCount[i]} tasks
+                  </Badge>
+                </div>
+              ))}
+
+              {hours.map((hour) => (
+                <React.Fragment key={hour}>
+                  <div className="text-right text-xs text-muted-foreground pr-2 pt-1 border-t">
+                    {format(set(new Date(), { hours: hour, minutes: 0 }), "ha")}
+                  </div>
+                  {week.map((day) => (
+                    <TimeSlot
+                      key={day.toISOString()}
+                      dateTime={set(day, { hours: hour, minutes: 0 })}
+                    />
+                  ))}
+                </React.Fragment>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+      <DragOverlay>
+        {activeTask ? (
+          <Card className="p-3 touch-none shadow-xl">
+            <div className="flex items-center">
+              <div className="flex-grow">
+                <p className="font-medium">{activeTask.title}</p>
+              </div>
+              <PriorityBadge priority={activeTask.priority} />
+            </div>
+          </Card>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

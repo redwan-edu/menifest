@@ -8,6 +8,7 @@ export interface Task {
   completed: boolean;
   milestoneId: string;
   goalId: string;
+  scheduledDateTime: string | null;
 }
 
 export interface Milestone {
