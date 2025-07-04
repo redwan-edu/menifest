@@ -51,14 +51,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader className="p-4">
-          <div className="flex items-center gap-2">
-            <Logo className="size-8 text-primary-foreground" />
-            <h1 className="text-xl font-semibold text-primary-foreground">
-              GoalFlow
-            </h1>
-          </div>
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="p-2">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Logo className="size-8 shrink-0 text-primary-foreground" />
+                    <h1 className="text-xl font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
+                        GoalFlow
+                    </h1>
+                </div>
+                <SidebarTrigger className="hidden shrink-0 md:flex" />
+            </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
@@ -71,15 +74,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="p-4">
-           <div className="flex items-center gap-2">
+        <SidebarFooter className="p-2">
+           <div className="flex items-center justify-center">
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle Theme">
               <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
