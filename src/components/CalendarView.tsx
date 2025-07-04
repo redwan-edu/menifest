@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -36,10 +37,15 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PriorityBadge = ({ priority }: { priority: Task["priority"] }) => {
@@ -256,106 +262,114 @@ export function CalendarView({ allTasks }: { allTasks: Task[] }) {
       onDragEnd={handleDragEnd}
       collisionDetection={closestCenter}
     >
-      <div className="space-y-6">
-        <PageHeader title="Plan View" />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Select a Week</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                className="p-0"
-              />
-            </CardContent>
-          </Card>
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Brain Dump</CardTitle>
-              <CardDescription>
-                Drag tasks to the calendar to schedule them. Drag scheduled tasks here to unschedule.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DroppableBrainDump>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                  <SortableContext
-                    items={unscheduledTasks.map((t) => t.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {unscheduledTasks.map((task) => (
-                      <DraggableTask key={task.id} task={task} />
-                    ))}
-                  </SortableContext>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Input
-                    placeholder="Add a new task..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
-                  />
-                  <Button onClick={handleAddTask}>
-                    <Plus className="h-4 w-4 mr-2" /> Add
-                  </Button>
-                </div>
-              </DroppableBrainDump>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Weekly Timebox</CardTitle>
-            <CardDescription>
-              {format(week[0], "MMMM d")} - {format(week[6], "MMMM d, yyyy")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: "50px repeat(7, 1fr)",
-                minWidth: "800px",
-              }}
-            >
-              <div />
-              {week.map((day, i) => (
-                <div
-                  key={day.toISOString()}
-                  className="text-center font-bold p-2 border-b"
-                >
-                  <p>{format(day, "EEE")}</p>
-                  <p className="text-muted-foreground text-sm">{format(day, "d")}</p>
-                  <Badge
-                    variant={weeklyTaskCount[i] > 0 ? "secondary" : "outline"}
-                    className="mt-1"
-                  >
-                    {weeklyTaskCount[i]} tasks
-                  </Badge>
-                </div>
-              ))}
-
-              {hours.map((hour) => (
-                <React.Fragment key={hour}>
-                  <div className="text-right text-xs text-muted-foreground pr-2 pt-1 border-t">
-                    {format(set(new Date(), { hours: hour, minutes: 0 }), "ha")}
+      <div className="flex flex-col h-full" style={{ height: 'calc(100vh - 5rem)' }}>
+        <PageHeader title="Plan View">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, "MMMM yyyy")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+        </PageHeader>
+        
+        <div className="flex flex-1 gap-6 overflow-hidden">
+          {/* Brain Dump Sidebar */}
+          <aside className="w-80 lg:w-96 flex-shrink-0">
+            <Card className="h-full flex flex-col">
+              <CardHeader>
+                <CardTitle>Brain Dump</CardTitle>
+                <CardDescription>Drag tasks to the calendar to schedule.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col overflow-hidden">
+                <DroppableBrainDump>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <SortableContext
+                      items={unscheduledTasks.map((t) => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {unscheduledTasks.map((task) => (
+                        <DraggableTask key={task.id} task={task} />
+                      ))}
+                    </SortableContext>
                   </div>
-                  {week.map((day) => (
-                    <TimeSlot
-                      key={day.toISOString()}
-                      dateTime={set(day, { hours: hour, minutes: 0 })}
+                  <div className="mt-4 flex gap-2 border-t pt-4">
+                    <Input
+                      placeholder="Add a new task..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
                     />
-                  ))}
-                </React.Fragment>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                    <Button onClick={handleAddTask} size="icon" aria-label="Add Task">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </DroppableBrainDump>
+              </CardContent>
+            </Card>
+          </aside>
+          
+          {/* Main Timebox Area */}
+          <div className="flex-1 overflow-hidden">
+             <Card className="h-full flex flex-col">
+                <CardHeader>
+                    <CardTitle>Weekly Timebox</CardTitle>
+                    <CardDescription>
+                    {format(week[0], "MMMM d")} - {format(week[6], "MMMM d, yyyy")}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-auto">
+                    <div
+                      className="grid"
+                      style={{
+                          gridTemplateColumns: "50px repeat(7, 1fr)",
+                          minWidth: "800px",
+                      }}
+                    >
+                      <div />
+                      {week.map((day, i) => (
+                          <div
+                          key={day.toISOString()}
+                          className="text-center font-bold p-2 border-b"
+                          >
+                          <p>{format(day, "EEE")}</p>
+                          <p className="text-muted-foreground text-sm">{format(day, "d")}</p>
+                          <Badge
+                              variant={weeklyTaskCount[i] > 0 ? "secondary" : "outline"}
+                              className="mt-1"
+                          >
+                              {weeklyTaskCount[i]} tasks
+                          </Badge>
+                          </div>
+                      ))}
+
+                      {hours.map((hour) => (
+                          <React.Fragment key={hour}>
+                          <div className="text-right text-xs text-muted-foreground pr-2 pt-1 border-t">
+                              {format(set(new Date(), { hours: hour, minutes: 0 }), "ha")}
+                          </div>
+                          {week.map((day) => (
+                              <TimeSlot
+                              key={day.toISOString()}
+                              dateTime={set(day, { hours: hour, minutes: 0 })}
+                              />
+                          ))}
+                          </React.Fragment>
+                      ))}
+                    </div>
+                </CardContent>
+             </Card>
+          </div>
+        </div>
       </div>
       <DragOverlay>
         {activeTask ? (
