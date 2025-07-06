@@ -55,9 +55,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="p-2">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Logo className="size-8 shrink-0 text-primary-foreground" />
                     <h1 className="text-xl font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-                        GoalFlow
+                        Menifest.day
                     </h1>
                 </div>
                 <SidebarTrigger className="hidden shrink-0 md:flex" />
@@ -93,10 +92,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <div className="md:hidden flex items-center p-2 border-b">
            <SidebarTrigger />
-           <div className="flex items-center gap-2 mx-auto">
-             <Logo className="size-7 text-foreground" />
-             <h1 className="text-lg font-semibold">GoalFlow</h1>
-           </div>
         </div>
         <main className="min-h-0 flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}

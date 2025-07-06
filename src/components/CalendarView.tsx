@@ -239,7 +239,7 @@ export function CalendarView({ allTasks }: { allTasks: Task[] }) {
     return (
       <div
         ref={setNodeRef}
-        className={cn("h-full p-1 rounded-lg", isOver && "bg-destructive/20")}
+        className={cn("h-full flex flex-col p-1 rounded-lg", isOver && "bg-destructive/20")}
       >
         {children}
       </div>

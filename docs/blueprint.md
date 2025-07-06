@@ -16,4 +16,4 @@
 - Accent color: Pale cyan (#B0E2FF) for highlighting interactive elements.
 - Body and headline font: 'Inter' (sans-serif) for clean, readable text.
 - Use rounded cards and soft shadows to create depth and a gentle user interface.
-- Simple, line-based icons to maintain a minimalist aesthetic.
+- Simple, line-based icons to maintain a minimalist aesthetic.       
