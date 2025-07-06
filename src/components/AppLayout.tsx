@@ -50,16 +50,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="icon">
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar>
         <SidebarHeader className="p-2">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-                        Menifest.day
-                    </h1>
-                </div>
-                <SidebarTrigger className="hidden shrink-0 md:flex" />
+            <div className="flex items-center gap-2">
+                <h1 className="text-xl font-semibold text-primary-foreground">
+                    Menifest.day
+                </h1>
             </div>
         </SidebarHeader>
         <SidebarContent>
@@ -73,7 +70,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <Link href={item.href}>
                     <item.icon />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
